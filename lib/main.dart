@@ -31,6 +31,14 @@ Future<void> main() async {
 
   location.onLocationChanged.listen((locate_dart.LocationData currentpos) {
     debugPrint("${currentpos.latitude}, ${currentpos.longitude}");
+    //JSのイベントを呼び出す
+    try {
+      main_control.evaluateJavascript(source: """
+        call_event(${currentpos.latitude}, ${currentpos.longitude});
+      """);
+    } catch (ex) {
+      debugPrint(ex.toString());
+    }
     current_position = currentpos;
   });
 
@@ -151,6 +159,15 @@ class Meecha_Page_State extends State<Meecha_Page> {
     connect(wsurl, token);
   }
 
+  // WebSocket 切断
+  void stop_ws(List<dynamic> args) {
+    try {
+      channel.sink.close();
+    } catch (ex) {
+      debugPrint(ex.toString());
+    }
+  }
+
   void connect(String wsurl, String atoken) {
     try {
       channel.sink.close();
@@ -162,6 +179,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
         customClient: client, connectTimeout: const Duration(seconds: 1));
     channel.stream.listen((msg) {
       dynamic data = jsonDecode(msg);
+
       switch (data["Command"]) {
         case "Location_Token":
           access_token = data["Payload"];
@@ -173,6 +191,15 @@ class Meecha_Page_State extends State<Meecha_Page> {
               "lng": current_position.longitude
             }
           }));
+          break;
+        default:
+          try {
+            main_control.evaluateJavascript(source: """
+              on_recved(${jsonEncode(data)});
+            """);
+          } catch (ex) {
+            debugPrint(ex.toString());
+          }
           break;
       }
     }, onError: (error) {
@@ -215,6 +242,10 @@ class Meecha_Page_State extends State<Meecha_Page> {
                 onLoadStart: (controller, url) async {
                   controller.addJavaScriptHandler(
                     handlerName: 'web_inited', callback: init_web,
+                  );
+
+                  controller.addJavaScriptHandler(
+                    handlerName: 'stop_ws', callback: stop_ws,
                   );
                 },
                 androidOnPermissionRequest: (InAppWebViewController controller,
