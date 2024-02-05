@@ -161,7 +161,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
   // WebSocket 切断
   void stop_ws(List<dynamic> args) {
     try {
-      channel.sink.close();
+      channel.sink.close(1000);
     } catch (ex) {
       debugPrint(ex.toString());
     }
