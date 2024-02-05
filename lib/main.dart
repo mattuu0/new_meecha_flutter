@@ -95,7 +95,7 @@ class Meecha_App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Meecha',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -216,7 +216,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
         SafeArea(
             child: InAppWebView(
                 initialUrlRequest: URLRequest(
-                    url: WebUri("https://100.111.29.70:11333/index.html")),
+                    url: WebUri("https://wao2server.tail6cf7b.ts.net/static/meecha/")),
                 androidOnGeolocationPermissionsShowPrompt:
                     (InAppWebViewController controller, String origin) async {
                   return GeolocationPermissionShowPromptResponse(
