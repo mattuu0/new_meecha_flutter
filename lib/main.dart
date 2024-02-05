@@ -44,7 +44,6 @@ Future<void> main() async {
 
   client.badCertificateCallback = (cert, host, port) => true;
 
-  
   runApp(app);
 }
 
@@ -170,11 +169,11 @@ class Meecha_Page_State extends State<Meecha_Page> {
 
   void connect(String wsurl, String atoken) {
     try {
-      channel.sink.close();
+      channel.sink.close(1000);
     } catch (ex) {
       debugPrint(ex.toString());
     }
-    
+
     channel = IOWebSocketChannel.connect(Uri.parse(wsurl),
         customClient: client, connectTimeout: const Duration(seconds: 1));
     channel.stream.listen((msg) {
@@ -204,6 +203,30 @@ class Meecha_Page_State extends State<Meecha_Page> {
       }
     }, onError: (error) {
       debugPrint("エラーです:${error}");
+
+      Future.delayed(Duration(seconds: 5)).then((_) {
+        debugPrint('再接続');
+        try {
+          connect(wsurl, atoken);
+        } catch (ex) {
+          debugPrint(ex.toString());
+        }
+      });
+    }, onDone: () {
+      debugPrint("通信を切断されました");
+
+      //切断コードが1005のとき
+      if (channel.closeCode.toString() == "1005") {
+        Future.delayed(Duration(seconds: 5)).then((_) {
+          debugPrint('再接続');
+          try {
+            connect(wsurl, atoken);
+          } catch (ex) {
+            debugPrint(ex.toString());
+          }
+        });
+      }
+      ;
     });
 
     channel.sink.add(jsonEncode({"Command": "auth", "Payload": atoken}));
@@ -216,7 +239,8 @@ class Meecha_Page_State extends State<Meecha_Page> {
         SafeArea(
             child: InAppWebView(
                 initialUrlRequest: URLRequest(
-                    url: WebUri("https://wao2server.tail6cf7b.ts.net/static/meecha/")),
+                    url: WebUri(
+                        "https://wao2server.tail6cf7b.ts.net/static/meecha/")),
                 androidOnGeolocationPermissionsShowPrompt:
                     (InAppWebViewController controller, String origin) async {
                   return GeolocationPermissionShowPromptResponse(
@@ -241,11 +265,13 @@ class Meecha_Page_State extends State<Meecha_Page> {
                 },
                 onLoadStart: (controller, url) async {
                   controller.addJavaScriptHandler(
-                    handlerName: 'web_inited', callback: init_web,
+                    handlerName: 'web_inited',
+                    callback: init_web,
                   );
 
                   controller.addJavaScriptHandler(
-                    handlerName: 'stop_ws', callback: stop_ws,
+                    handlerName: 'stop_ws',
+                    callback: stop_ws,
                   );
                 },
                 androidOnPermissionRequest: (InAppWebViewController controller,
