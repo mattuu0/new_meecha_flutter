@@ -11,6 +11,7 @@ import 'package:location/location.dart' as locate_dart;
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 InAppWebViewController main_control = null as InAppWebViewController;
 String access_token = "";
@@ -18,6 +19,15 @@ WebSocketChannel channel = null as WebSocketChannel;
 locate_dart.LocationData current_position = null as locate_dart.LocationData;
 HttpClient client = HttpClient();
 bool auto_reconnect = false;
+locate_dart.Location location = locate_dart.Location();
+
+final FlutterLocalNotificationsPlugin notificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+const notificationDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+  '0eba0d7b-fd6a-4775-bdf7-79a82968c692',
+  'Meecha Notification',
+));
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +36,12 @@ Future<void> main() async {
 
   Meecha_App app = const Meecha_App();
 
-  locate_dart.Location location = locate_dart.Location();
   await location.enableBackgroundMode(enable: true);
+  await location.changeNotificationOptions(
+      channelName: "Meecha_Core_Notify",
+      title: "Meecha",
+      subtitle: "Meecha は位置情報を使用しています",
+      onTapBringToFront: true);
 
   location.onLocationChanged.listen((locate_dart.LocationData currentpos) {
     debugPrint("${currentpos.latitude}, ${currentpos.longitude}");
@@ -43,6 +57,31 @@ Future<void> main() async {
   });
 
   client.badCertificateCallback = (cert, host, port) => true;
+
+  try {
+    const initializationSettings = InitializationSettings(
+      android: AndroidInitializationSettings('ic_launcher'),
+    );
+
+    if (Platform.isAndroid) {
+      await notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
+
+    await notificationsPlugin.initialize(
+      initializationSettings,
+
+      // 通知をタップしたときの処理(今回はprint)
+      onDidReceiveNotificationResponse:
+          (NotificationResponse notificationResponse) async {
+        debugPrint('id=${notificationResponse.id}の通知に対してアクション。');
+      },
+    );
+  } catch (ex) {
+    debugPrint(ex.toString());
+  }
 
   runApp(app);
 }
@@ -175,12 +214,49 @@ class Meecha_Page_State extends State<Meecha_Page> {
       debugPrint(ex.toString());
     }
 
+    try {
+      location.changeNotificationOptions(
+        channelName: "Meecha_Core_Notify",
+        title: "Meecha",
+        subtitle: "接続を開始しました",
+        onTapBringToFront: true).then((value) => null);
+    } catch (ex) {
+      debugPrint(ex.toString());
+    }
+
     channel = IOWebSocketChannel.connect(Uri.parse(wsurl),
         customClient: client, connectTimeout: const Duration(seconds: 1));
     channel.stream.listen((msg) {
+      bool call_js = false;
+
       dynamic data = jsonDecode(msg);
 
       switch (data["Command"]) {
+        case "Auth_Complete":
+          try {
+            location.changeNotificationOptions(
+              channelName: "Meecha_Core_Notify",
+              title: "Meecha",
+              subtitle: "接続完了",
+              onTapBringToFront: true).then((value) => null);
+            
+            notificationsPlugin.cancel(10000);
+          } catch (ex) {
+            debugPrint(ex.toString());
+          }
+          break;
+        case "near_friend":
+          dynamic payload_data = data["Payload"];
+
+          if (payload_data["is_first"] && payload_data["is_self"]) {
+            notificationsPlugin
+                .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
+                    notificationDetails)
+                .then((value) => null);
+            call_js = true;
+          }
+          ;
+          break;
         case "Location_Token":
           access_token = data["Payload"];
           channel.sink.add(jsonEncode({
@@ -193,19 +269,33 @@ class Meecha_Page_State extends State<Meecha_Page> {
           }));
           break;
         default:
-          try {
-            main_control.evaluateJavascript(source: """
-              on_recved(${jsonEncode(data)});
-            """);
-          } catch (ex) {
-            debugPrint(ex.toString());
-          }
+          call_js = true;
           break;
+      }
+
+      if (call_js) {
+        try {
+          main_control.evaluateJavascript(source: """
+            on_recved(${jsonEncode(data)});
+          """);
+        } catch (ex) {
+          debugPrint(ex.toString());
+        }
       }
     }, onError: (error) {
       debugPrint("エラーです:${error}");
-    }, onDone: () {
+    }, onDone: () async {
       debugPrint("通信を切断されました");
+      try {
+        location.changeNotificationOptions(
+          channelName: "Meecha_Core_Notify",
+          title: "Meecha",
+          subtitle: "切断されました",
+          onTapBringToFront: true).then((value) => null);
+      } catch (ex) {
+        debugPrint(ex.toString());
+      }
+
       debugPrint(channel.closeCode.toString());
       //再接続がオフの場合戻る
       if (!auto_reconnect) {
@@ -214,6 +304,10 @@ class Meecha_Page_State extends State<Meecha_Page> {
 
       //切断コードが1005のとき
       if (channel.closeCode.toString() != "1000") {
+        notificationsPlugin
+          .show(10000, "Meecha", "切断されました",
+              notificationDetails)
+          .then((value) => null);
         Future.delayed(Duration(seconds: 5)).then((_) {
           debugPrint('再接続');
           try {
