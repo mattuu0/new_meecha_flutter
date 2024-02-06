@@ -12,12 +12,14 @@ import 'package:location/location.dart' as locate_dart;
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-InAppWebViewController main_control = null as InAppWebViewController;
+InAppWebViewController? main_control = null;
 String access_token = "";
-WebSocketChannel channel = null as WebSocketChannel;
-locate_dart.LocationData current_position = null as locate_dart.LocationData;
+WebSocketChannel? channel = null;
+locate_dart.LocationData? current_position = null;
 HttpClient client = HttpClient();
+bool auto_reconnect = false;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -155,6 +157,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
     String token = decode_data["token"];
     String wsurl = decode_data["wsurl"];
 
+    auto_reconnect = true;
     connect(wsurl, token);
   }
 
@@ -204,6 +207,11 @@ class Meecha_Page_State extends State<Meecha_Page> {
     }, onError: (error) {
       debugPrint("エラーです:${error}");
 
+      //再接続がオフの場合戻る
+      if (!auto_reconnect) {
+        return;
+      }
+
       Future.delayed(Duration(seconds: 5)).then((_) {
         debugPrint('再接続');
         try {
@@ -214,6 +222,10 @@ class Meecha_Page_State extends State<Meecha_Page> {
       });
     }, onDone: () {
       debugPrint("通信を切断されました");
+      //再接続がオフの場合戻る
+      if (!auto_reconnect) {
+        return;
+      }
 
       //切断コードが1005のとき
       if (channel.closeCode.toString() == "1005") {
@@ -264,6 +276,12 @@ class Meecha_Page_State extends State<Meecha_Page> {
                   main_control = controller;
                 },
                 onLoadStart: (controller, url) async {
+                  auto_reconnect = false;
+                  try {
+                    stop_ws([""]);
+                  } catch (ex) {
+                    debugPrint(ex.toString());
+                  }
                   controller.addJavaScriptHandler(
                     handlerName: 'web_inited',
                     callback: init_web,

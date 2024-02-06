@@ -41,6 +41,7 @@ dependencies:
   location: ^5.0.0
   flutter_foreground_service: ^0.4.1
   web_socket_channel: ^2.4.0
+  flutter_local_notifications: ^16.3.2
 
 dev_dependencies:
   flutter_test:
