@@ -249,16 +249,19 @@ class Meecha_Page_State extends State<Meecha_Page> {
           }
           break;
         case "near_friend":
-          dynamic payload_data = data["Payload"];
+          try {
+            dynamic payload_data = data["Payload"];
 
-          if (payload_data["is_first"] && payload_data["is_self"]) {
-            notificationsPlugin
+            if (payload_data["is_first"] && payload_data["is_self"]) {
+              notificationsPlugin
                 .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
                     notificationDetails)
                 .then((value) => null);
-            call_js = true;
+              call_js = true;
+            };
+          } catch (ex) {
+            debugPrint(ex.toString());
           }
-          ;
           break;
         case "Location_Token":
           access_token = data["Payload"];
@@ -308,10 +311,14 @@ class Meecha_Page_State extends State<Meecha_Page> {
 
       //切断コードが1005のとき
       if (channel.closeCode.toString() != "1000") {
-        notificationsPlugin
-          .show(10000, "Meecha", "切断されました",
-              notificationDetails)
-          .then((value) => null);
+        try {
+          notificationsPlugin
+            .show(10000, "Meecha", "切断されました",
+                notificationDetails)
+            .then((value) => null);
+        } catch (ex) {
+          debugPrint(ex.toString());
+        }
         Future.delayed(Duration(seconds: 5)).then((_) {
           debugPrint('再接続');
           try {
