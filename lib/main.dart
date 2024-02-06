@@ -32,7 +32,7 @@ const notificationDetails = NotificationDetails(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocationPermissionsHandler().request();
-  await OptimizeBattery.stopOptimizingBatteryUsage();
+  //await OptimizeBattery.stopOptimizingBatteryUsage();
 
   Meecha_App app = const Meecha_App();
 
