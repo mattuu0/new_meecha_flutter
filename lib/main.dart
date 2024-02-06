@@ -12,12 +12,11 @@ import 'package:location/location.dart' as locate_dart;
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-InAppWebViewController? main_control = null;
+InAppWebViewController main_control = null as InAppWebViewController;
 String access_token = "";
-WebSocketChannel? channel = null;
-locate_dart.LocationData? current_position = null;
+WebSocketChannel channel = null as WebSocketChannel;
+locate_dart.LocationData current_position = null as locate_dart.LocationData;
 HttpClient client = HttpClient();
 bool auto_reconnect = false;
 
