@@ -205,29 +205,16 @@ class Meecha_Page_State extends State<Meecha_Page> {
       }
     }, onError: (error) {
       debugPrint("エラーです:${error}");
-
-      //再接続がオフの場合戻る
-      if (!auto_reconnect) {
-        return;
-      }
-
-      Future.delayed(Duration(seconds: 5)).then((_) {
-        debugPrint('再接続');
-        try {
-          connect(wsurl, atoken);
-        } catch (ex) {
-          debugPrint(ex.toString());
-        }
-      });
     }, onDone: () {
       debugPrint("通信を切断されました");
+      debugPrint(channel.closeCode.toString());
       //再接続がオフの場合戻る
       if (!auto_reconnect) {
         return;
       }
 
       //切断コードが1005のとき
-      if (channel.closeCode.toString() == "1005") {
+      if (channel.closeCode.toString() != "1000") {
         Future.delayed(Duration(seconds: 5)).then((_) {
           debugPrint('再接続');
           try {
