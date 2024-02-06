@@ -38,6 +38,7 @@ Future<void> main() async {
 
   await location.enableBackgroundMode(enable: true);
   await location.changeNotificationOptions(
+      iconName: "ic_launcher",
       channelName: "Meecha_Core_Notify",
       title: "Meecha",
       subtitle: "Meecha は位置情報を使用しています",
@@ -216,6 +217,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
 
     try {
       location.changeNotificationOptions(
+        iconName: "ic_launcher",
         channelName: "Meecha_Core_Notify",
         title: "Meecha",
         subtitle: "接続を開始しました",
@@ -235,6 +237,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
         case "Auth_Complete":
           try {
             location.changeNotificationOptions(
+              iconName: "ic_launcher",
               channelName: "Meecha_Core_Notify",
               title: "Meecha",
               subtitle: "接続完了",
@@ -288,6 +291,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
       debugPrint("通信を切断されました");
       try {
         location.changeNotificationOptions(
+          iconName: "ic_launcher",
           channelName: "Meecha_Core_Notify",
           title: "Meecha",
           subtitle: "切断されました",
