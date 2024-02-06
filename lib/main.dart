@@ -253,12 +253,18 @@ class Meecha_Page_State extends State<Meecha_Page> {
             dynamic payload_data = data["Payload"];
 
             if (payload_data["is_first"] && payload_data["is_self"]) {
-              notificationsPlugin
-                .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
+              try {
+                notificationsPlugin
+                  .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
                     notificationDetails)
-                .then((value) => null);
-              call_js = true;
+                  .then((value) => null);
+              } catch (ex) {
+                debugPrint(ex.toString());
+              }
             };
+
+            call_js = true;
+            break;
           } catch (ex) {
             debugPrint(ex.toString());
           }
