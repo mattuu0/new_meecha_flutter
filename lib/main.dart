@@ -254,6 +254,20 @@ class Meecha_Page_State extends State<Meecha_Page> {
               debugPrint(ex.toString());
             }
             break;
+          case "stop_notify":
+            try {
+              dynamic payload_data = data["Payload"];
+
+              notificationsPlugin
+                .cancel(payload_data["userid"].hashCode)
+                .then((value) => null);
+
+              call_js = true;
+              break;
+            } catch (ex) {
+              debugPrint(ex.toString());
+            }
+            break;
           case "near_friend":
             try {
               dynamic payload_data = data["Payload"];
@@ -261,7 +275,7 @@ class Meecha_Page_State extends State<Meecha_Page> {
               if (payload_data["is_first"] && payload_data["is_self"]) {
                 try {
                   notificationsPlugin
-                    .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
+                    .show(payload_data["userid"].hashCode, "Meecha", "${payload_data["unane"]}さんが近くにいます",
                       notificationDetails)
                     .then((value) => null);
                 } catch (ex) {
