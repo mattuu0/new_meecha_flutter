@@ -20,6 +20,7 @@ locate_dart.LocationData current_position = null as locate_dart.LocationData;
 HttpClient client = HttpClient();
 bool auto_reconnect = false;
 locate_dart.Location location = locate_dart.Location();
+bool connecting = false;
 
 final FlutterLocalNotificationsPlugin notificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -208,136 +209,145 @@ class Meecha_Page_State extends State<Meecha_Page> {
     }
   }
 
-  void connect(String wsurl, String atoken) {
+  void connect(String wsurl, String atoken) async {
+    connecting = true;
     try {
       channel.sink.close(1000);
     } catch (ex) {
       debugPrint(ex.toString());
     }
 
-    try {
-      location.changeNotificationOptions(
-        iconName: "ic_launcher",
-        channelName: "Meecha_Core_Notify",
-        title: "Meecha",
-        subtitle: "接続を開始しました",
-        onTapBringToFront: true).then((value) => null);
-    } catch (ex) {
-      debugPrint(ex.toString());
-    }
+    Future.delayed(Duration(seconds: 5)).then((_) {
+      connecting = false;
 
-    channel = IOWebSocketChannel.connect(Uri.parse(wsurl),
-        customClient: client, connectTimeout: const Duration(seconds: 1));
-    channel.stream.listen((msg) {
-      bool call_js = false;
-
-      dynamic data = jsonDecode(msg);
-
-      switch (data["Command"]) {
-        case "Auth_Complete":
-          try {
-            location.changeNotificationOptions(
-              iconName: "ic_launcher",
-              channelName: "Meecha_Core_Notify",
-              title: "Meecha",
-              subtitle: "接続完了",
-              onTapBringToFront: true).then((value) => null);
-            
-            notificationsPlugin.cancel(10000);
-          } catch (ex) {
-            debugPrint(ex.toString());
-          }
-          break;
-        case "near_friend":
-          try {
-            dynamic payload_data = data["Payload"];
-
-            if (payload_data["is_first"] && payload_data["is_self"]) {
-              try {
-                notificationsPlugin
-                  .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
-                    notificationDetails)
-                  .then((value) => null);
-              } catch (ex) {
-                debugPrint(ex.toString());
-              }
-            };
-
-            call_js = true;
-            break;
-          } catch (ex) {
-            debugPrint(ex.toString());
-          }
-          break;
-        case "Location_Token":
-          access_token = data["Payload"];
-          channel.sink.add(jsonEncode({
-            "Command": "location",
-            "Payload": {
-              "token": access_token,
-              "lat": current_position.latitude,
-              "lng": current_position.longitude
-            }
-          }));
-          break;
-        default:
-          call_js = true;
-          break;
-      }
-
-      if (call_js) {
-        try {
-          main_control.evaluateJavascript(source: """
-            on_recved(${jsonEncode(data)});
-          """);
-        } catch (ex) {
-          debugPrint(ex.toString());
-        }
-      }
-    }, onError: (error) {
-      debugPrint("エラーです:${error}");
-    }, onDone: () async {
-      debugPrint("通信を切断されました");
       try {
         location.changeNotificationOptions(
           iconName: "ic_launcher",
           channelName: "Meecha_Core_Notify",
           title: "Meecha",
-          subtitle: "切断されました",
+          subtitle: "接続を開始しました",
           onTapBringToFront: true).then((value) => null);
       } catch (ex) {
         debugPrint(ex.toString());
       }
 
-      debugPrint(channel.closeCode.toString());
-      //再接続がオフの場合戻る
-      if (!auto_reconnect) {
-        return;
-      }
+      channel = IOWebSocketChannel.connect(Uri.parse(wsurl),
+          customClient: client,connectTimeout: Duration(seconds: 5));
 
-      //切断コードが1005のとき
-      if (channel.closeCode.toString() != "1000") {
+      channel.stream.listen((msg) {
+        bool call_js = false;
+
+        dynamic data = jsonDecode(msg);
+
+        switch (data["Command"]) {
+          case "Auth_Complete":
+            try {
+              location.changeNotificationOptions(
+                iconName: "ic_launcher",
+                channelName: "Meecha_Core_Notify",
+                title: "Meecha",
+                subtitle: "接続完了",
+                onTapBringToFront: true).then((value) => null);
+              
+              notificationsPlugin.cancel(10000);
+            } catch (ex) {
+              debugPrint(ex.toString());
+            }
+            break;
+          case "near_friend":
+            try {
+              dynamic payload_data = data["Payload"];
+
+              if (payload_data["is_first"] && payload_data["is_self"]) {
+                try {
+                  notificationsPlugin
+                    .show(1000, "Meecha", "${payload_data["unane"]}さんが近くにいます",
+                      notificationDetails)
+                    .then((value) => null);
+                } catch (ex) {
+                  debugPrint(ex.toString());
+                }
+              };
+
+              call_js = true;
+              break;
+            } catch (ex) {
+              debugPrint(ex.toString());
+            }
+            break;
+          case "Location_Token":
+            access_token = data["Payload"];
+            channel.sink.add(jsonEncode({
+              "Command": "location",
+              "Payload": {
+                "token": access_token,
+                "lat": current_position.latitude,
+                "lng": current_position.longitude
+              }
+            }));
+            break;
+          default:
+            call_js = true;
+            break;
+        }
+
+        if (call_js) {
+          try {
+            main_control.evaluateJavascript(source: """
+              on_recved(${jsonEncode(data)});
+            """);
+          } catch (ex) {
+            debugPrint(ex.toString());
+          }
+        }
+      }, onError: (error) {
+        debugPrint("エラーです:${error}");
+      }, onDone: () async {
+        debugPrint("通信を切断されました");
         try {
-          notificationsPlugin
-            .show(10000, "Meecha", "切断されました",
-                notificationDetails)
-            .then((value) => null);
+          location.changeNotificationOptions(
+            iconName: "ic_launcher",
+            channelName: "Meecha_Core_Notify",
+            title: "Meecha",
+            subtitle: "切断されました",
+            onTapBringToFront: true).then((value) => null);
         } catch (ex) {
           debugPrint(ex.toString());
         }
-        Future.delayed(Duration(seconds: 5)).then((_) {
+
+        debugPrint(channel.closeCode.toString());
+        //再接続がオフの場合戻る
+        if (!auto_reconnect) {
+          return;
+        }
+
+        //接続中の場合戻る
+        if (connecting) {
+          return;
+        }
+
+        //切断コードが1005のとき
+        if (channel.closeCode.toString() != "1000") {
+          try {
+            notificationsPlugin
+              .show(10000, "Meecha", "切断されました",
+                  notificationDetails)
+              .then((value) => null);
+          } catch (ex) {
+            debugPrint(ex.toString());
+          }
           debugPrint('再接続');
           try {
             connect(wsurl, atoken);
           } catch (ex) {
             debugPrint(ex.toString());
           }
-        });
-      }
-      ;
-    });
+        }
+        ;
+      });
 
-    channel.sink.add(jsonEncode({"Command": "auth", "Payload": atoken}));
+      channel.sink.add(jsonEncode({"Command": "auth", "Payload": atoken}));
+    });
   }
 
   @override
