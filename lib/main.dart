@@ -179,6 +179,8 @@ class Meecha_Page extends StatefulWidget {
 }
 
 class Meecha_Page_State extends State<Meecha_Page> {
+  double load_val = 0;
+  bool showErrorPage = false;
   @override
   void initState() {
     super.initState();
@@ -376,67 +378,116 @@ class Meecha_Page_State extends State<Meecha_Page> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: WillPopScope(child: Stack(
-      children: [
-        SafeArea(
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(
-                  url: WebUri(
-                      "https://wao2server.tail6cf7b.ts.net/static/meecha/")),
-              androidOnGeolocationPermissionsShowPrompt:
-                  (InAppWebViewController controller, String origin) async {
-                return GeolocationPermissionShowPromptResponse(
-                    origin: origin, allow: true, retain: true);
-              },
-              onReceivedServerTrustAuthRequest:
-                  (controller, challenge) async {
-                return ServerTrustAuthResponse(
-                    action: ServerTrustAuthResponseAction.PROCEED);
-              },
-              initialOptions: InAppWebViewGroupOptions(
-                android: AndroidInAppWebViewOptions(
-                  useWideViewPort: true,
-                  geolocationEnabled: true,
-                ),
-                ios: IOSInAppWebViewOptions(
-                  allowsInlineMediaPlayback: true,
-                ),
-              ),
-              onLoadStop: (controller, url) async {
-                main_control = controller;
-              },
-              onLoadStart: (controller, url) async {
-                auto_reconnect = false;
-                try {
-                  stop_ws([""]);
-                } catch (ex) {
-                  debugPrint(ex.toString());
-                }
-                controller.addJavaScriptHandler(
-                  handlerName: 'web_inited',
-                  callback: init_web,
-                );
+        resizeToAvoidBottomInset: false,
+        body: WillPopScope(
+            child: SafeArea(
+                bottom: false,
+                left: false,
+                right: false,
+                child: Stack(
+              children: [
+                InAppWebView(
+                    initialUrlRequest: URLRequest(
+                        url: WebUri(
+                            "https://wao2server.tail6cf7b.ts.net/static/meecha/")),
+                    androidOnGeolocationPermissionsShowPrompt:
+                        (InAppWebViewController controller,
+                            String origin) async {
+                      return GeolocationPermissionShowPromptResponse(
+                          origin: origin, allow: true, retain: true);
+                    },
+                    onReceivedServerTrustAuthRequest:
+                        (controller, challenge) async {
+                      return ServerTrustAuthResponse(
+                          action: ServerTrustAuthResponseAction.PROCEED);
+                    },
+                    initialOptions: InAppWebViewGroupOptions(
+                      android: AndroidInAppWebViewOptions(
+                        useWideViewPort: true,
+                        geolocationEnabled: true,
+                      ),
+                      ios: IOSInAppWebViewOptions(
+                        allowsInlineMediaPlayback: true,
+                      ),
+                    ),
+                    onLoadError: (controller, url, code, message) => {
+                      setState(() => showErrorPage = true,)
+                    },
+                    onLoadHttpError: (controller, url, statusCode, description) => {
+                      setState(() => showErrorPage = true,)
+                    },
+                    onLoadStop: (controller, url) async {
+                      main_control = controller;
+                    },
+                    onLoadStart: (controller, url) async {
+                      setState(() => showErrorPage = false,);
+                      auto_reconnect = false;
+                      try {
+                        stop_ws([""]);
+                      } catch (ex) {
+                        debugPrint(ex.toString());
+                      }
+                      controller.addJavaScriptHandler(
+                        handlerName: 'web_inited',
+                        callback: init_web,
+                      );
 
-                controller.addJavaScriptHandler(
-                  handlerName: 'stop_ws',
-                  callback: stop_ws,
-                );
-              },
-              androidOnPermissionRequest: (InAppWebViewController controller,
-                  String origin, List<String> resources) async {
-                return PermissionRequestResponse(
-                    resources: resources,
-                    action: PermissionRequestResponseAction.GRANT);
-              })),
-        ]),
-        onWillPop: () async {
-          try {
-            await main_control.goBack();
-          } catch (ex) {
-            debugPrint(ex.toString());
-          }
-          return false;
-        })
-    );
+                      controller.addJavaScriptHandler(
+                        handlerName: 'stop_ws',
+                        callback: stop_ws,
+                      );
+                    },
+                    onProgressChanged: (controller, progress) {
+                      try {
+                        setState(() {
+                          load_val = progress / 100;
+                        });
+                      } catch (ex) {
+                        debugPrint(ex.toString());
+                      }
+                    },
+                    androidOnPermissionRequest:
+                        (InAppWebViewController controller, String origin,
+                            List<String> resources) async {
+                      return PermissionRequestResponse(
+                          resources: resources,
+                          action: PermissionRequestResponseAction.GRANT);
+                    }),
+                    
+                showErrorPage ? Center(
+                  child: Container(
+                    color: Colors.white,
+                    alignment: Alignment.center,
+                    height: double.infinity,
+                    width: double.infinity,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Text('読み込みに失敗しました'),
+                      ElevatedButton(onPressed: () async {
+                        try {
+                          main_control.goBack();
+                        } catch (ex) {
+                          debugPrint(ex.toString());
+                        }
+                      }, child: Text('戻る'))
+                    ])) 
+                  ),
+                ) : SizedBox(height: 0, width: 0),
+                LinearProgressIndicator(
+                  valueColor: new AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent),
+                  value:load_val,
+                ),
+              ],
+            )),
+            onWillPop: () async {
+              try {
+                await main_control.goBack();
+              } catch (ex) {
+                debugPrint(ex.toString());
+              }
+              return false;
+            }));
   }
 }
