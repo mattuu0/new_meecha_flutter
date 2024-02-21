@@ -221,18 +221,20 @@ class Meecha_Page_State extends State<Meecha_Page> {
       connecting = false;
 
       try {
-        location.changeNotificationOptions(
-          iconName: "ic_launcher",
-          channelName: "Meecha_Core_Notify",
-          title: "Meecha",
-          subtitle: "接続を開始しました",
-          onTapBringToFront: true).then((value) => null);
+        location
+            .changeNotificationOptions(
+                iconName: "ic_launcher",
+                channelName: "Meecha_Core_Notify",
+                title: "Meecha",
+                subtitle: "接続を開始しました",
+                onTapBringToFront: true)
+            .then((value) => null);
       } catch (ex) {
         debugPrint(ex.toString());
       }
 
       channel = IOWebSocketChannel.connect(Uri.parse(wsurl),
-          customClient: client,connectTimeout: Duration(seconds: 5));
+          customClient: client, connectTimeout: Duration(seconds: 5));
 
       channel.stream.listen((msg) {
         bool call_js = false;
@@ -242,13 +244,15 @@ class Meecha_Page_State extends State<Meecha_Page> {
         switch (data["Command"]) {
           case "Auth_Complete":
             try {
-              location.changeNotificationOptions(
-                iconName: "ic_launcher",
-                channelName: "Meecha_Core_Notify",
-                title: "Meecha",
-                subtitle: "接続完了",
-                onTapBringToFront: true).then((value) => null);
-              
+              location
+                  .changeNotificationOptions(
+                      iconName: "ic_launcher",
+                      channelName: "Meecha_Core_Notify",
+                      title: "Meecha",
+                      subtitle: "接続完了",
+                      onTapBringToFront: true)
+                  .then((value) => null);
+
               notificationsPlugin.cancel(10000);
             } catch (ex) {
               debugPrint(ex.toString());
@@ -259,8 +263,8 @@ class Meecha_Page_State extends State<Meecha_Page> {
               dynamic payload_data = data["Payload"];
 
               notificationsPlugin
-                .cancel(payload_data["userid"].hashCode)
-                .then((value) => null);
+                  .cancel(payload_data["userid"].hashCode)
+                  .then((value) => null);
 
               call_js = true;
               break;
@@ -275,13 +279,17 @@ class Meecha_Page_State extends State<Meecha_Page> {
               if (payload_data["is_first"] && payload_data["is_self"]) {
                 try {
                   notificationsPlugin
-                    .show(payload_data["userid"].hashCode, "Meecha", "${payload_data["unane"]}さんが近くにいます",
-                      notificationDetails)
-                    .then((value) => null);
+                      .show(
+                          payload_data["userid"].hashCode,
+                          "Meecha",
+                          "${payload_data["unane"]}さんが近くにいます",
+                          notificationDetails)
+                      .then((value) => null);
                 } catch (ex) {
                   debugPrint(ex.toString());
                 }
-              };
+              }
+              ;
 
               call_js = true;
               break;
@@ -319,12 +327,14 @@ class Meecha_Page_State extends State<Meecha_Page> {
       }, onDone: () async {
         debugPrint("通信を切断されました");
         try {
-          location.changeNotificationOptions(
-            iconName: "ic_launcher",
-            channelName: "Meecha_Core_Notify",
-            title: "Meecha",
-            subtitle: "切断されました",
-            onTapBringToFront: true).then((value) => null);
+          location
+              .changeNotificationOptions(
+                  iconName: "ic_launcher",
+                  channelName: "Meecha_Core_Notify",
+                  title: "Meecha",
+                  subtitle: "切断されました",
+                  onTapBringToFront: true)
+              .then((value) => null);
         } catch (ex) {
           debugPrint(ex.toString());
         }
@@ -344,9 +354,8 @@ class Meecha_Page_State extends State<Meecha_Page> {
         if (channel.closeCode.toString() != "1000") {
           try {
             notificationsPlugin
-              .show(10000, "Meecha", "切断されました",
-                  notificationDetails)
-              .then((value) => null);
+                .show(10000, "Meecha", "切断されました", notificationDetails)
+                .then((value) => null);
           } catch (ex) {
             debugPrint(ex.toString());
           }
@@ -366,59 +375,68 @@ class Meecha_Page_State extends State<Meecha_Page> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Scaffold(
+      body: WillPopScope(child: Stack(
       children: [
         SafeArea(
             child: InAppWebView(
-                initialUrlRequest: URLRequest(
-                    url: WebUri(
-                        "https://wao2server.tail6cf7b.ts.net/static/meecha/")),
-                androidOnGeolocationPermissionsShowPrompt:
-                    (InAppWebViewController controller, String origin) async {
-                  return GeolocationPermissionShowPromptResponse(
-                      origin: origin, allow: true, retain: true);
-                },
-                onReceivedServerTrustAuthRequest:
-                    (controller, challenge) async {
-                  return ServerTrustAuthResponse(
-                      action: ServerTrustAuthResponseAction.PROCEED);
-                },
-                initialOptions: InAppWebViewGroupOptions(
-                  android: AndroidInAppWebViewOptions(
-                    useWideViewPort: true,
-                    geolocationEnabled: true,
-                  ),
-                  ios: IOSInAppWebViewOptions(
-                    allowsInlineMediaPlayback: true,
-                  ),
+              initialUrlRequest: URLRequest(
+                  url: WebUri(
+                      "https://wao2server.tail6cf7b.ts.net/static/meecha/")),
+              androidOnGeolocationPermissionsShowPrompt:
+                  (InAppWebViewController controller, String origin) async {
+                return GeolocationPermissionShowPromptResponse(
+                    origin: origin, allow: true, retain: true);
+              },
+              onReceivedServerTrustAuthRequest:
+                  (controller, challenge) async {
+                return ServerTrustAuthResponse(
+                    action: ServerTrustAuthResponseAction.PROCEED);
+              },
+              initialOptions: InAppWebViewGroupOptions(
+                android: AndroidInAppWebViewOptions(
+                  useWideViewPort: true,
+                  geolocationEnabled: true,
                 ),
-                onLoadStop: (controller, url) async {
-                  main_control = controller;
-                },
-                onLoadStart: (controller, url) async {
-                  auto_reconnect = false;
-                  try {
-                    stop_ws([""]);
-                  } catch (ex) {
-                    debugPrint(ex.toString());
-                  }
-                  controller.addJavaScriptHandler(
-                    handlerName: 'web_inited',
-                    callback: init_web,
-                  );
+                ios: IOSInAppWebViewOptions(
+                  allowsInlineMediaPlayback: true,
+                ),
+              ),
+              onLoadStop: (controller, url) async {
+                main_control = controller;
+              },
+              onLoadStart: (controller, url) async {
+                auto_reconnect = false;
+                try {
+                  stop_ws([""]);
+                } catch (ex) {
+                  debugPrint(ex.toString());
+                }
+                controller.addJavaScriptHandler(
+                  handlerName: 'web_inited',
+                  callback: init_web,
+                );
 
-                  controller.addJavaScriptHandler(
-                    handlerName: 'stop_ws',
-                    callback: stop_ws,
-                  );
-                },
-                androidOnPermissionRequest: (InAppWebViewController controller,
-                    String origin, List<String> resources) async {
-                  return PermissionRequestResponse(
-                      resources: resources,
-                      action: PermissionRequestResponseAction.GRANT);
-                })),
-      ],
+                controller.addJavaScriptHandler(
+                  handlerName: 'stop_ws',
+                  callback: stop_ws,
+                );
+              },
+              androidOnPermissionRequest: (InAppWebViewController controller,
+                  String origin, List<String> resources) async {
+                return PermissionRequestResponse(
+                    resources: resources,
+                    action: PermissionRequestResponseAction.GRANT);
+              })),
+        ]),
+        onWillPop: () async {
+          try {
+            await main_control.goBack();
+          } catch (ex) {
+            debugPrint(ex.toString());
+          }
+          return false;
+        })
     );
   }
 }
